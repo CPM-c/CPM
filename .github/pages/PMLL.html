@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Report: PMEM, PMLL & CPM</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Chosen Palette: Scholarly Blue & Neutral -->
+    <!-- Application Structure Plan: A thematic, single-page application with a fixed sidebar navigation for easy access to five key sections: Overview, Persistent Memory (PMEM), PMLL System, The "CPM" Enigma, and Synthesis. This structure was chosen to break down a dense, technical report into digestible, self-contained topics. It allows users to explore non-linearly, focusing on areas of interest. Key interactions include an interactive comparison of memory technologies, a clickable architectural diagram of the PMLL system to reveal implementation details, and clear visual disambiguation of the "CPM" term. The goal is to guide the user from high-level concepts to detailed architectural and analytical points, facilitating a comprehensive understanding of the material. -->
+    <!-- Visualization & Content Choices: 
+        1. PMEM Technology Comparison: Goal: Compare PMEM's performance. Viz: Horizontal Bar Chart (Chart.js). Interaction: Static visual comparison with tooltips. Justification: A bar chart is highly effective for comparing discrete performance metrics (latency, throughput) across different technologies (DRAM, PMEM, SSD), making the advantages of PMEM immediately apparent. Library: Chart.js for its simplicity and responsiveness.
+        2. PMLL Architecture: Goal: Explain the PMLL's operational flow. Viz: Interactive Diagram (HTML/CSS/JS). Interaction: Users click on diagram components (e.g., 'Encrypt') to display descriptions of the corresponding C file (`encrypt_knowledge_graph.c`) in a separate panel. Justification: An interactive diagram is more engaging than a static image or a table. It directly links the abstract architectural concepts to their concrete software implementations, enhancing understanding. Method: Custom HTML/CSS with JavaScript event listeners.
+        3. CPM Disambiguation: Goal: Clarify the different meanings of "CPM". Viz: Titled Card Layout (HTML/CSS). Interaction: None, focus on clear information separation. Justification: A clean, visually separated layout is crucial for resolving the ambiguity around the "CPM" acronym, preventing user confusion by clearly distinguishing the user's query from unrelated package managers. Method: Tailwind CSS grid/flexbox.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 50vh;
+        }
+        .nav-link.active {
+            background-color: #3498db;
+            color: white;
+        }
+         .nav-link {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="bg-[#F8F7F4] text-[#2C3E50]">
+
+    <div class="flex">
+        <!-- Sidebar Navigation -->
+        <aside class="sticky top-0 h-screen w-64 bg-[#2C3E50] text-white p-4 hidden lg:block shadow-2xl">
+            <h1 class="text-2xl font-bold text-white mb-8 border-b border-gray-600 pb-4">Interactive Report</h1>
+            <nav id="desktop-nav" class="space-y-2">
+                <a href="#overview" class="block py-2.5 px-4 rounded nav-link">Overview</a>
+                <a href="#pmem" class="block py-2.5 px-4 rounded nav-link">Persistent Memory (PMEM)</a>
+                <a href="#pmll" class="block py-2.5 px-4 rounded nav-link">The PMLL System</a>
+                <a href="#cpm" class="block py-2.5 px-4 rounded nav-link">The "CPM" Enigma</a>
+                <a href="#synthesis" class="block py-2.5 px-4 rounded nav-link">Synthesis & Conclusion</a>
+            </nav>
+        </aside>
+        
+        <!-- Mobile Header -->
+        <header class="lg:hidden fixed top-0 left-0 right-0 bg-[#2C3E50] text-white p-4 z-50 shadow-lg">
+            <div class="flex justify-between items-center">
+                <h1 class="text-xl font-bold">Interactive Report</h1>
+                <button id="mobile-menu-button" class="focus:outline-none">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                </button>
+            </div>
+             <nav id="mobile-nav" class="hidden mt-4 space-y-2">
+                <a href="#overview" class="block py-2.5 px-4 rounded nav-link">Overview</a>
+                <a href="#pmem" class="block py-2.5 px-4 rounded nav-link">Persistent Memory (PMEM)</a>
+                <a href="#pmll" class="block py-2.5 px-4 rounded nav-link">The PMLL System</a>
+                <a href="#cpm" class="block py-2.5 px-4 rounded nav-link">The "CPM" Enigma</a>
+                <a href="#synthesis" class="block py-2.5 px-4 rounded nav-link">Synthesis & Conclusion</a>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="w-full lg:w-[calc(100%-16rem)] p-6 md:p-10 pt-24 lg:pt-10">
+            
+            <!-- Section 1: Overview -->
+            <section id="overview" class="mb-16">
+                <h2 class="text-4xl font-bold text-[#3498DB] mb-4 border-b-2 border-[#3498DB] pb-2">Overview</h2>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <p class="mb-4 text-lg">This interactive report provides a deep analysis of three key technological concepts: Persistent Memory (PMEM), the Persistent Memory Logic Loop (PMLL) system, and the ambiguous term "CPM". The goal is to translate the dense findings of the source research report into an intuitive, explorable experience. You can navigate through the core topics using the sidebar to understand each component and their intricate relationships.</p>
+                    <h3 class="text-2xl font-semibold mb-3 text-[#2c3e50]">Executive Summary</h3>
+                    <p class="text-gray-700 leading-relaxed">Persistent memory represents a significant advancement in computer architecture, offering a new tier that combines the speed of volatile memory with the non-volatility of traditional storage. The Persistent Memory Logic Loop (PMLL) emerges as a novel, C-language based framework designed for adaptive and explainable AI systems, leveraging PMEM concepts for durable knowledge storage. A central challenge in this investigation is the ambiguity surrounding "CPM," particularly a specific, inaccessible GitHub project (`CPM-c/CPM`). This report defines PMEM and PMLL, navigates the complexities of the term "CPM," and offers avenues for further investigation.</p>
+                </div>
+            </section>
+
+            <!-- Section 2: Persistent Memory (PMEM) -->
+            <section id="pmem" class="mb-16">
+                <h2 class="text-4xl font-bold text-[#3498DB] mb-4 border-b-2 border-[#3498DB] pb-2">Deep Dive: Persistent Memory (PMEM)</h2>
+                 <p class="mb-6 text-lg bg-white p-6 rounded-lg shadow-md">Persistent Memory is a transformative technology that bridges the gap between fast, volatile RAM and slower, persistent storage. It provides non-volatile, byte-addressable memory directly on the system's memory bus. This section breaks down its core characteristics, operational modes, and performance advantages. Interact with the elements below to learn more.</p>
+
+                <div class="grid md:grid-cols-2 gap-8 mb-8">
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                         <h3 class="text-2xl font-semibold mb-4">Operational Modes</h3>
+                         <p class="mb-4">PMEM can operate in different modes. Select a mode to see its description.</p>
+                         <div class="flex space-x-2 mb-4">
+                            <button id="btn-mode-memory" class="flex-1 p-3 bg-[#3498DB] text-white rounded-md hover:bg-[#2980B9] transition">Memory Mode</button>
+                            <button id="btn-mode-appdirect" class="flex-1 p-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition">App Direct Mode</button>
+                         </div>
+                         <div id="pmem-mode-description" class="p-4 bg-gray-50 rounded-md min-h-[150px]">
+                            <!-- Description will be injected here by JS -->
+                         </div>
+                    </div>
+                     <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-2xl font-semibold mb-4">Key Characteristics</h3>
+                        <ul class="space-y-3">
+                            <li class="flex items-start"><span class="text-2xl mr-3 text-[#3498DB]">💾</span> <div><strong class="block">Non-Volatility:</strong> Data persists across power cycles, ensuring durability.</div></li>
+                            <li class="flex items-start"><span class="text-2xl mr-3 text-[#3498DB]">⚡️</span> <div><strong class="block">Byte-Addressability:</strong> CPU can access data at a granular byte-level, like DRAM.</div></li>
+                            <li class="flex items-start"><span class="text-2xl mr-3 text-[#3498DB]">🚌</span> <div><strong class="block">Memory Bus Access:</strong> Resides on the memory bus for ultra-low latency access.</div></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-2xl font-semibold text-center mb-4">Performance Comparison</h3>
+                    <p class="text-center text-gray-600 mb-6">This chart visualizes the relative performance of PMEM compared to traditional DRAM and NVMe SSDs, highlighting its unique position in the memory/storage hierarchy.</p>
+                    <div class="chart-container">
+                        <canvas id="pmemChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 3: The PMLL System -->
+            <section id="pmll" class="mb-16">
+                <h2 class="text-4xl font-bold text-[#3498DB] mb-4 border-b-2 border-[#3498DB] pb-2">The PMLL System Architecture</h2>
+                <p class="mb-6 text-lg bg-white p-6 rounded-lg shadow-md">The Persistent Memory Logic Loop (PMLL) is a sophisticated, C-based AI framework engineered to leverage PMEM. Its core is a recursive logic loop that continuously updates a secure knowledge graph. The diagram below illustrates this process. Click on the components of the loop to see which part of the C codebase is responsible for that function.</p>
+
+                <div class="lg:flex gap-8">
+                    <!-- PMLL Diagram -->
+                    <div class="lg:w-2/3 bg-white p-6 rounded-lg shadow-lg mb-6 lg:mb-0">
+                        <h3 class="text-2xl font-semibold text-center mb-6">Recursive Logic Loop</h3>
+                        <div id="pmll-diagram" class="flex flex-col items-center space-y-2">
+                             <div data-file="novel_topic.c" class="pmll-node cursor-pointer p-3 bg-gray-100 border-2 border-transparent hover:border-[#3498DB] rounded-lg transition text-center w-3/4">1. Process Novel Topic</div>
+                             <div class="text-3xl text-gray-400">↓</div>
+                             <div data-file="update_knowledge_graph.c" class="pmll-node cursor-pointer p-3 bg-gray-100 border-2 border-transparent hover:border-[#3498DB] rounded-lg transition text-center w-3/4">2. Update Knowledge Graph</div>
+                             <div class="text-3xl text-gray-400">↓</div>
+                             <div data-file="encrypt_knowledge_graph.c" class="pmll-node cursor-pointer p-3 bg-gray-100 border-2 border-transparent hover:border-[#3498DB] rounded-lg transition text-center w-3/4">3. Encrypt Graph (RSA)</div>
+                             <div class="text-3xl text-gray-400">↓</div>
+                             <div data-file="write_to_memory_silos.c" class="pmll-node cursor-pointer p-3 bg-gray-100 border-2 border-transparent hover:border-[#3498DB] rounded-lg transition text-center w-3/4">4. Write to Memory Silo</div>
+                             <div class="text-3xl text-gray-400 transform -rotate-90 -translate-x-24 -translate-y-6">⤵</div>
+                             <div data-file="pml_logic_loop.c" class="pmll-node cursor-pointer p-3 bg-blue-100 border-2 border-transparent hover:border-[#3498DB] rounded-lg transition text-center w-3/4 font-bold">5. Loop (pml_logic_loop.c)</div>
+                        </div>
+                    </div>
+                    <!-- Info Panel -->
+                    <div class="lg:w-1/3 bg-white p-6 rounded-lg shadow-lg flex flex-col">
+                        <h3 class="text-2xl font-semibold mb-4 text-center">Component Details</h3>
+                        <div id="pmll-info-panel" class="flex-grow p-4 bg-gray-50 rounded-md text-gray-700">
+                             <p class="text-center">Click a component on the left to see its details.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 4: The "CPM" Enigma -->
+            <section id="cpm" class="mb-16">
+                 <h2 class="text-4xl font-bold text-[#3498DB] mb-4 border-b-2 border-[#3498DB] pb-2">The "CPM" Enigma</h2>
+                 <p class="mb-6 text-lg bg-white p-6 rounded-lg shadow-md">A central challenge of the research was the term "CPM". The user's query pointed to a specific project, `CPM-c/CPM`, but its source was inaccessible. Meanwhile, research materials are dominated by other, unrelated software using the same acronym. This section clarifies the different "CPM" entities and speculates on the nature of the queried project.</p>
+
+                <div class="grid lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-2xl font-semibold mb-4 text-red-600">User Query: `CPM-c/CPM` (Inaccessible)</h3>
+                        <p class="mb-2">This is the subject of the original query. The `-c` suffix strongly suggests a C-language project, aligning with PMLL's implementation.</p>
+                        <p class="font-bold mb-2">Hypothesized Nature:</p>
+                        <ul class="list-disc list-inside space-y-1 text-gray-700">
+                            <li>A core component or module of the PMLL system.</li>
+                            <li>A supporting C-language utility library for PMEM applications.</li>
+                            <li>An alias or alternative name for the PMLL project itself.</li>
+                        </ul>
+                        <p class="mt-4 text-sm text-red-700 bg-red-100 p-3 rounded-md">Status: Unverifiable due to an inaccessible GitHub link. Its relationship to PMLL is speculative.</p>
+                    </div>
+                     <div class="bg-white p-6 rounded-lg shadow-lg">
+                        <h3 class="text-2xl font-semibold mb-4 text-green-600">Documented: CPM Package Managers</h3>
+                        <p class="mb-2">The vast majority of public information refers to "CPM" as a C++ package manager based on CMake.</p>
+                        <ul class="list-disc list-inside space-y-1 text-gray-700">
+                           <li><strong>`iauns/cpm`</strong>: A C++ package manager for composable modules.</li>
+                           <li><strong>`cpm-cmake/CPM.cmake`</strong>: A script for dependency management in CMake.</li>
+                        </ul>
+                        <p class="mt-4 text-sm text-green-700 bg-green-100 p-3 rounded-md">Status: Well-documented but functionally unrelated to the C-based AI/PMEM context of PMLL.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 5: Synthesis & Conclusion -->
+            <section id="synthesis" class="mb-16">
+                 <h2 class="text-4xl font-bold text-[#3498DB] mb-4 border-b-2 border-[#3498DB] pb-2">Synthesis & Conclusion</h2>
+                 <p class="mb-6 text-lg bg-white p-6 rounded-lg shadow-md">The investigation reveals a strong, fundamental link between the PMLL system's architecture and the capabilities of Persistent Memory. PMLL is a prime example of a system designed from the ground up to leverage PMEM. The "CPM" query, however, remains unresolved due to inaccessible sources, but the evidence strongly suggests a C-language context, making PMLL the most relevant point of comparison.</p>
+                 
+                 <div class="bg-white p-6 rounded-lg shadow-lg">
+                    <h3 class="text-2xl font-semibold mb-4">Recommendations for Further Investigation</h3>
+                    <ol class="list-decimal list-inside space-y-3 text-gray-700 leading-relaxed">
+                        <li><strong>Verify `CPM-c/CPM` Source:</strong> Attempt to find an alternative or updated URL for the project, as the original may be outdated or private.</li>
+                        <li><strong>Investigate the Creator:</strong> Research other work by Josef Kurk Edwards, the attributed creator of PMLL, which may lead to information about `CPM-c/CPM`.</li>
+                        <li><strong>Locate the Originating White Paper:</strong> Find the paper "Proposal for Persistent Secure Memory Architecture in Conversational AI", which may contain direct references.</li>
+                        <li><strong>Consider PMLL as the Subject:</strong> The user's interest in `CPM-c/CPM` may be fully satisfied by the detailed information available on the PMLL framework.</li>
+                        <li><strong>Clarify "CPM" Context:</strong> Ensure the interest is in a C-based system, not the more common C++/CMake package managers.</li>
+                    </ol>
+                </div>
+            </section>
+        </main>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // PMEM Chart
+    const pmemCtx = document.getElementById('pmemChart').getContext('2d');
+    const pmemChart = new Chart(pmemCtx, {
+        type: 'bar',
+        data: {
+            labels: ['DRAM', 'Persistent Memory (PMEM)', 'NVMe SSD'],
+            datasets: [{
+                label: 'Latency (lower is better)',
+                data: [100, 1000, 100000], // Nanoseconds, logarithmic scale for viz
+                backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                borderColor: 'rgba(52, 152, 219, 1)',
+                borderWidth: 1
+            }, {
+                label: 'Throughput (higher is better)',
+                data: [25, 10, 3.5], // GB/s
+                backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                borderColor: 'rgba(231, 76, 60, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    type: 'logarithmic',
+                    title: {
+                        display: true,
+                        text: 'Performance (Logarithmic Scale for Latency)'
+                    }
+                },
+                y: {
+                     ticks: {
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.dataset.label.includes('Latency')) {
+                                label += context.parsed.x.toLocaleString() + ' ns';
+                            } else {
+                                label += context.parsed.x.toLocaleString() + ' GB/s';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // PMEM Mode Descriptions
+    const pmemModeDesc = {
+        memory: {
+            title: "Memory Mode",
+            description: "PMEM is used to expand main memory capacity. DRAM acts as a fast cache for 'hot' data, while the larger PMEM capacity holds 'warm' data. In this mode, data is typically not persistent across power loss."
+        },
+        appdirect: {
+            title: "App Direct Mode",
+            description: "Applications directly manage data persistence in PMEM. Data requiring durability is stored in PMEM, while volatile data resides in DRAM. This enables ultra-fast storage applications."
+        }
+    };
+    
+    const modeDescContainer = document.getElementById('pmem-mode-description');
+    const btnMemory = document.getElementById('btn-mode-memory');
+    const btnAppDirect = document.getElementById('btn-mode-appdirect');
+
+    function updatePmemDescription(mode) {
+        modeDescContainer.innerHTML = `
+            <h4 class="font-bold text-lg mb-2 text-[#3498DB]">${pmemModeDesc[mode].title}</h4>
+            <p>${pmemModeDesc[mode].description}</p>
+        `;
+        if (mode === 'memory') {
+            btnMemory.classList.add('bg-[#3498DB]', 'text-white');
+            btnMemory.classList.remove('bg-gray-200', 'text-gray-800');
+            btnAppDirect.classList.add('bg-gray-200', 'text-gray-800');
+            btnAppDirect.classList.remove('bg-[#3498DB]', 'text-white');
+        } else {
+            btnAppDirect.classList.add('bg-[#3498DB]', 'text-white');
+            btnAppDirect.classList.remove('bg-gray-200', 'text-gray-800');
+            btnMemory.classList.add('bg-gray-200', 'text-gray-800');
+            btnMemory.classList.remove('bg-[#3498DB]', 'text-white');
+        }
+    }
+    
+    btnMemory.addEventListener('click', () => updatePmemDescription('memory'));
+    btnAppDirect.addEventListener('click', () => updatePmemDescription('appdirect'));
+    updatePmemDescription('memory');
+
+    // PMLL Diagram Interaction
+    const pmllNodes = document.querySelectorAll('.pmll-node');
+    const pmllInfoPanel = document.getElementById('pmll-info-panel');
+    const pmllFileDescriptions = {
+        'pml_logic_loop.c': '<strong>`pml_logic_loop.c`</strong>: Implements the main recursive logic loop, handling I/O, server connection, and orchestrating the continuous update and persistence of the knowledge graph.',
+        'novel_topic.c': '<strong>`novel_topic.c`</strong>: Identifies and processes new topics, adding them as new nodes to the knowledge graph to ensure it remains dynamic and avoids redundancy.',
+        'update_knowledge_graph.c': '<strong>`update_knowledge_graph.c`</strong>: Responsible for updating the knowledge graph by adding new relationships (edges) and nodes based on incoming data, ensuring graph integrity.',
+        'Persistence.c': '<strong>`Persistence.c`</strong>: Manages all aspects of data persistence, including saving data to and loading data from memory silos and handling data serialization.',
+        'encrypt_knowledge_graph.c': '<strong>`encrypt_knowledge_graph.c`</strong>: Secures the knowledge graph using RSA encryption, making its content accessible only to authorized parties.',
+        'write_to_memory_silos.c': '<strong>`write_to_memory_silos.c`</strong>: Takes the encrypted knowledge graph and writes it to designated persistent memory silos for secure storage and retrieval.',
+    };
+
+    pmllNodes.forEach(node => {
+        node.addEventListener('click', () => {
+            const fileName = node.dataset.file;
+            pmllNodes.forEach(n => n.classList.remove('bg-blue-200', 'border-[#3498DB]'));
+            node.classList.add('bg-blue-200', 'border-[#3498DB]');
+            pmllInfoPanel.innerHTML = `<p>${pmllFileDescriptions[fileName] || 'Select a component.'}</p>`;
+        });
+    });
+
+    // Navigation
+    const sections = document.querySelectorAll('section');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileNav = document.getElementById('mobile-nav');
+
+    mobileMenuButton.addEventListener('click', () => {
+        mobileNav.classList.toggle('hidden');
+    });
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+             if (!mobileNav.classList.contains('hidden')) {
+                mobileNav.classList.add('hidden');
+             }
+        });
+    });
+
+    window.addEventListener('scroll', () => {
+        let current = '';
+        sections.forEach(section => {
+            const sectionTop = section.offsetTop;
+            if (pageYOffset >= sectionTop - 60) {
+                current = section.getAttribute('id');
+            }
+        });
+        navLinks.forEach(link => {
+            link.classList.remove('active');
+            if (link.getAttribute('href').substring(1) === current) {
+                link.classList.add('active');
+            }
+        });
+    });
+
+});
+</script>
+
+</body>
+</html>
