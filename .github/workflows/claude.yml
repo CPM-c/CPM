@@ -1,4 +1,4 @@
-name: Claude Code
+name: Claude Code and API Key Info
 
 on:
   issue_comment:
@@ -11,7 +11,7 @@ on:
     types: [submitted]
 
 jobs:
-  claude:
+  claude_interaction: # Renamed job for clarity if more jobs are added
     if: |
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
@@ -22,15 +22,50 @@ jobs:
       contents: read
       pull-requests: read
       issues: read
-      id-token: write
+      # id-token: write # Only needed if the action requires OIDC
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 1 # Fetch only the latest commit
+
+      # Step to get Anthropic API Key information using curl
+      # This step assumes ANTHROPIC_ADMIN_KEY is set as a repository secret
+      - name: Get Anthropic API Key Information
+        env:
+          ANTHROPIC_ADMIN_KEY: ${{ secrets.ANTHROPIC_ADMIN_KEY }}
+        run: |
+          echo "Fetching API key information (ID: apikey_01Rj2N8SVvo6BePZj99NhmiT)..."
+          curl_response=$(curl -s -w "\nHTTP_STATUS_CODE:%{http_code}" "https://api.anthropic.com/v1/organizations/api_keys/apikey_01Rj2N8SVvo6BePZj99NhmiT" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "content-type: application/json" \
+            --header "x-api-key: $ANTHROPIC_ADMIN_KEY")
+          
+          # Extract body and status code
+          http_body=$(echo "$curl_response" | sed '$d')
+          http_status_code=$(echo "$curl_response" | tail -n1 | cut -d: -f2)
+
+          echo "Status Code: $http_status_code"
+          echo "Response Body: $http_body"
+
+          if [ "$http_status_code" -ne 200 ]; then
+            echo "Error: Failed to retrieve API key information. Status: $http_status_code"
+            # Optionally, fail the step: exit 1
+          fi
+          # You can add further processing here, e.g., using jq to parse the JSON
+          # echo "$http_body" | jq .status # Example: get the status field
 
       - name: Run Claude Code
-        id: claude
-        uses: anthropics/claude-code-action@beta
+        id: claude # Step ID
+        uses: anthropics/claude-code-action@beta # Using the beta version
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Add any other necessary inputs for the claude-code-action here
+          # For example:
+          # model: 'claude-3-opus-20240229' 
+          # system_prompt: 'You are a helpful coding assistant.'
+          # user_prompt: |
+          #   Context: ${{ github.event_name }}
+          #   Repository: ${{ github.repository }}
+          #   Event details: ${{ toJson(github.event) }}
+          #   Please review the changes or issue.
