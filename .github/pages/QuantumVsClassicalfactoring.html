@@ -1,0 +1,523 @@
+
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shor's Algorithm vs. SNFS: The Quantum Factoring Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals with Tech Accents -->
+    <!-- Application Structure Plan: A thematic, single-page application with a fixed top navigation that scrolls to different sections. The core of the app is a central, interactive "Arena" (comparison dashboard) where users can manipulate a slider to see the performance of Shor's Algorithm vs. SNFS change in real-time. This interactive dashboard structure is chosen over a static report layout to actively engage the user in understanding the core concept of complexity scaling. It's supported by surrounding thematic sections for context ("The Special Numbers"), implications ("The Cryptographic Threat"), and practical realities ("Implementation Hurdles"). This structure guides the user from the core comparison to the broader context, making the information more digestible and memorable than a linear document. -->
+    <!-- Visualization & Content Choices: 
+        1. Report Info: Comparing Shor's polynomial complexity vs. SNFS's sub-exponential complexity. Goal: Compare. Viz/Method: Interactive Line Chart (Chart.js/Canvas). Interaction: A slider controls the input bit size, dynamically updating the chart data and a highlighter on the line. Justification: Visually demonstrates the dramatic divergence in computational cost, which is the report's central thesis. The interaction makes the abstract concept of complexity growth tangible.
+        2. Report Info: The steps involved in Shor's and SNFS algorithms. Goal: Organize & Inform. Viz/Method: Clickable flow diagrams (HTML/CSS/Tailwind). Interaction: Users click on a step in the simplified diagram to reveal a more detailed explanation in a pop-up or adjacent text area. Justification: Deconstructs complex processes into manageable, user-explorable parts, preventing information overload while still providing depth.
+        3. Report Info: Properties of Mersenne, Cunningham, and general X^N-1 numbers (Table 1). Goal: Inform & Organize. Viz/Method: Tabbed content area (HTML/JS). Interaction: Clicking tabs switches the displayed content. Justification: Neatly organizes related but distinct categories of information from the report without cluttering the main view.
+        4. Report Info: Cryptographic and implementation challenges. Goal: Inform. Viz/Method: Icon-based info cards in a grid layout (HTML/Tailwind). Interaction: Subtle hover effects for engagement. Justification: Presents key takeaways in a visually scannable and digestible format, suitable for summarizing the report's conclusions.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F8F5F2;
+            color: #2c3e50;
+        }
+        .nav-link {
+            transition: color 0.3s, border-bottom-color 0.3s;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .btn-primary {
+            background-color: #3498db;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background-color: #2980b9;
+            transform: scale(1.05);
+        }
+        .flow-step {
+            cursor: pointer;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .flow-step.active {
+            background-color: #ecf5ff;
+            border-color: #3498db;
+        }
+        .tab-btn {
+            transition: color 0.3s, border-bottom-color 0.3s;
+        }
+        .tab-btn.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        .chart-container {
+            position: relative;
+            margin: auto;
+            width: 100%;
+            height: 300px;
+            max-height: 40vh;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body class="antialiased">
+
+    <nav class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex-shrink-0">
+                    <h1 class="text-xl font-bold text-gray-800">Quantum Factoring</h1>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="#introduction" class="nav-link px-3 py-2 text-sm font-medium">Introduction</a>
+                        <a href="#comparison" class="nav-link px-3 py-2 text-sm font-medium">The Arena</a>
+                        <a href="#special-numbers" class="nav-link px-3 py-2 text-sm font-medium">Special Numbers</a>
+                        <a href="#implications" class="nav-link px-3 py-2 text-sm font-medium">Implications</a>
+                        <a href="#challenges" class="nav-link px-3 py-2 text-sm font-medium">Challenges</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section id="introduction" class="py-20 md:py-32">
+            <div class="max-w-4xl mx-auto text-center px-4">
+                <h2 class="text-4xl md:text-6xl font-extrabold tracking-tight text-gray-900">
+                    The Quantum Challenge to
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-teal-400">Classical Factoring</span>
+                </h2>
+                <p class="mt-6 text-lg md:text-xl text-gray-600 max-w-3xl mx-auto">
+                    For centuries, factoring large numbers has been a monumental task. This difficulty underpins modern cryptography. But a new paradigm is emerging. This exploration analyzes the battle between classical computing's finest, the Special Number Field Sieve (SNFS), and the revolutionary power of Shor's quantum algorithm, focusing on a special class of integers: $M = X^N - 1$.
+                </p>
+                <div class="mt-10">
+                    <a href="#comparison" class="btn btn-primary">Enter The Arena</a>
+                </div>
+            </div>
+        </section>
+        
+        <div class="bg-white">
+        <section id="comparison" class="py-20 md:py-28">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The Arena: Classical vs. Quantum</h2>
+                    <p class="mt-4 text-lg text-gray-600">
+                        Here, we pit the two champions against each other. Use the slider to increase the size of the number to be factored (represented by its bits) and watch how the estimated computational cost diverges. This visualization demonstrates the core concept of the report: the exponential speedup of quantum computing.
+                    </p>
+                </div>
+
+                <div class="mt-12">
+                    <div class="max-w-2xl mx-auto">
+                         <label for="bit-slider" class="block text-sm font-medium text-gray-700">Number of Bits (n): <span id="bit-slider-value" class="font-bold text-blue-600">512</span> bits</label>
+                        <input id="bit-slider" type="range" min="10" max="4096" value="512" step="2" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mt-2">
+                    </div>
+                </div>
+
+                <div class="mt-12">
+                    <h3 class="text-center text-2xl font-semibold mb-6">Complexity Growth: Polynomial vs. Sub-exponential</h3>
+                    <div class="chart-container card p-4">
+                        <canvas id="complexityChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="mt-20 grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+                    <div class="card p-6 lg:p-8">
+                        <h3 class="text-2xl font-bold text-center text-gray-800">Classical Champion: SNFS</h3>
+                        <p class="text-center text-gray-500 mt-2">Special Number Field Sieve</p>
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-2">Key Properties:</h4>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start"><span class="text-blue-500 mr-2 mt-1">&#9679;</span><strong>Complexity:</strong> Sub-exponential, $L_M[1/3, c]$</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2 mt-1">&#9679;</span><strong>Hardware:</strong> Classical CPU clusters, RAM, Storage</li>
+                                <li class="flex items-start"><span class="text-blue-500 mr-2 mt-1">&#9679;</span><strong>Advantage:</strong> Highly optimized for special numbers like $M = X^N - 1$ via easier polynomial selection.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-3">Algorithm Flow</h4>
+                            <div id="snfs-flow-container" class="space-y-2">
+                                <div id="snfs-step-1" class="flow-step border-2 border-gray-200 p-3 rounded-md">1. Polynomial Selection</div>
+                                <div id="snfs-step-2" class="flow-step border-2 border-gray-200 p-3 rounded-md">2. Sieving for Smooth Relations</div>
+                                <div id="snfs-step-3" class="flow-step border-2 border-gray-200 p-3 rounded-md">3. Linear Algebra (Matrix)</div>
+                                <div id="snfs-step-4" class="flow-step border-2 border-gray-200 p-3 rounded-md">4. Square Root & GCD</div>
+                            </div>
+                            <div id="snfs-details" class="mt-4 p-4 bg-gray-50 rounded-md text-sm text-gray-700 min-h-[120px]">
+                                Select a step to see details.
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card p-6 lg:p-8">
+                        <h3 class="text-2xl font-bold text-center text-teal-600">Quantum Challenger: Shor's</h3>
+                        <p class="text-center text-gray-500 mt-2">Shor's Quantum Algorithm</p>
+                         <div class="mt-6">
+                            <h4 class="font-semibold mb-2">Key Properties:</h4>
+                            <ul class="space-y-2 text-gray-600">
+                                <li class="flex items-start"><span class="text-teal-500 mr-2 mt-1">&#9679;</span><strong>Complexity:</strong> Polynomial, $O(n^3)$</li>
+                                <li class="flex items-start"><span class="text-teal-500 mr-2 mt-1">&#9679;</span><strong>Hardware:</strong> Fault-tolerant quantum computer</li>
+                                <li class="flex items-start"><span class="text-teal-500 mr-2 mt-1">&#9679;</span><strong>Advantage:</strong> Quantum parallelism allows finding the period of a function exponentially faster than any known classical method.</li>
+                            </ul>
+                        </div>
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-3">Algorithm Flow</h4>
+                            <div id="shor-flow-container" class="space-y-2">
+                                <div id="shor-step-1" class="flow-step border-2 border-gray-200 p-3 rounded-md">1. Classical Reduction to Order-Finding</div>
+                                <div id="shor-step-2" class="flow-step border-2 border-gray-200 p-3 rounded-md">2. Quantum Modular Exponentiation</div>
+                                <div id="shor-step-3" class="flow-step border-2 border-gray-200 p-3 rounded-md">3. Quantum Fourier Transform (QFT)</div>
+                                <div id="shor-step-4" class="flow-step border-2 border-gray-200 p-3 rounded-md">4. Period Extraction & Factor Derivation</div>
+                            </div>
+                            <div id="shor-details" class="mt-4 p-4 bg-gray-50 rounded-md text-sm text-gray-700 min-h-[120px]">
+                                Select a step to see details.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        </div>
+
+        <section id="special-numbers" class="py-20 md:py-28">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The "Special" Numbers: $M = X^N - 1$</h2>
+                    <p class="mt-4 text-lg text-gray-600">
+                        Why focus on this form? Numbers like $M = X^N - 1$ have unique algebraic properties that classical algorithms like SNFS can exploit, making them "easier" to factor than general integers of the same size. This section explores their characteristics. Shor's algorithm, however, doesn't rely on these special properties for its speedup.
+                    </p>
+                </div>
+                <div class="mt-12 card p-6">
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                            <button id="tab-mersenne" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Mersenne Numbers</button>
+                            <button id="tab-cunningham" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">Cunningham Numbers</button>
+                            <button id="tab-general" class="tab-btn whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm">General Properties</button>
+                        </nav>
+                    </div>
+                    <div id="tab-content" class="mt-6 min-h-[250px]">
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="bg-white">
+        <section id="implications" class="py-20 md:py-28">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">The Cryptographic Threat</h2>
+                    <p class="mt-4 text-lg text-gray-600">
+                        The ability to efficiently factor large integers, regardless of their form, has profound consequences for digital security. This is because the security of widely used systems like RSA is built on the assumption that factoring is computationally infeasible for classical computers.
+                    </p>
+                </div>
+                <div class="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div class="text-center p-4">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-blue-100 mx-auto mb-4 text-3xl">🔑</div>
+                        <h3 class="text-xl font-semibold">Factoring-Based Security</h3>
+                        <p class="mt-2 text-gray-600">Systems like RSA rely on a public key (a large number $M$) that is easy to use for encryption but extremely difficult to "break" without knowing its secret prime factors.</p>
+                    </div>
+                    <div class="text-center p-4">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mx-auto mb-4 text-3xl">💥</div>
+                        <h3 class="text-xl font-semibold">Shor's Algorithm's Impact</h3>
+                        <p class="mt-2 text-gray-600">By factoring $M$ in polynomial time, Shor's algorithm can find the secret factors, completely breaking the encryption. This threat applies to any system based on factoring hardness.</p>
+                    </div>
+                    <div class="text-center p-4">
+                        <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mx-auto mb-4 text-3xl">🛡️</div>
+                        <h3 class="text-xl font-semibold">The QRC Imperative</h3>
+                        <p class="mt-2 text-gray-600">The inevitable rise of quantum computing necessitates a transition to Quantum-Resistant Cryptography (QRC), which uses mathematical problems believed to be hard for both classical and quantum computers.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        </div>
+
+        <section id="challenges" class="py-20 md:py-28">
+             <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Realizing the Promise: Implementation Hurdles</h2>
+                    <p class="mt-4 text-lg text-gray-600">
+                        While theoretically powerful, building a quantum computer capable of factoring cryptographically relevant numbers is a monumental engineering challenge. Here are the primary obstacles.
+                    </p>
+                </div>
+                <div class="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div class="card p-6 text-center">
+                        <h3 class="font-semibold">Qubit Quality</h3>
+                        <p class="mt-2 text-sm text-gray-600">Qubits must have high fidelity and long coherence times to prevent errors from accumulating during computation.</p>
+                    </div>
+                    <div class="card p-6 text-center">
+                        <h3 class="font-semibold">Qubit Scale</h3>
+                        <p class="mt-2 text-sm text-gray-600">Factoring large numbers requires millions of high-quality physical qubits, far beyond current capabilities.</p>
+                    </div>
+                    <div class="card p-6 text-center">
+                        <h3 class="font-semibold">Error Correction</h3>
+                        <p class="mt-2 text-sm text-gray-600">Robust quantum error correction (QEC) is needed to create fault-tolerant logical qubits, but this comes with a massive physical qubit overhead.</p>
+                    </div>
+                    <div class="card p-6 text-center">
+                        <h3 class="font-semibold">Circuit Depth</h3>
+                        <p class="mt-2 text-sm text-gray-600">The quantum circuits for Shor's are very deep, requiring a long sequence of precise operations without decoherence.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-gray-800 text-white">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
+            <p>An interactive exploration based on the report "Factoring Integers of the Form $M = X^N - 1$".</p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const flowStepData = {
+                snfs: {
+                    "snfs-step-1": "<strong>Polynomial Selection:</strong> The algorithm chooses two polynomials that share a common root modulo M. For SNFS, this is much easier because the number's form $X^N-1$ allows for a 'good' polynomial with small coefficients, which is key to its efficiency.",
+                    "snfs-step-2": "<strong>Sieving:</strong> A computationally intensive search for 'smooth' numbers—integers that factor completely over a predefined base of small primes. This is done on both the rational and algebraic sides of the number fields.",
+                    "snfs-step-3": "<strong>Linear Algebra:</strong> The relations found during sieving are used to build a massive sparse matrix over the field $\\mathbb{F}_2$. Finding a dependency in this matrix reveals a way to construct a congruence of squares.",
+                    "snfs-step-4": "<strong>Square Root & GCD:</strong> The matrix solution allows construction of two numbers $a, b$ where $a^2 \\equiv b^2 \\pmod{M}$. The factors of M are then found by computing gcd(a-b, M), which is a fast classical operation."
+                },
+                shor: {
+                    "shor-step-1": "<strong>Classical Reduction:</strong> The problem of factoring M is classically reduced to finding the 'order' (or period) $r$ of a random number $a$ modulo $M$. This means finding the smallest $r > 0$ such that $a^r \\equiv 1 \\pmod{M}$.",
+                    "shor-step-2": "<strong>Quantum Modular Exponentiation:</strong> The quantum computer prepares a superposition of all possible inputs $k$ and computes $a^k \\pmod{M}$ for all of them simultaneously, storing the results in a second register. This is the source of quantum parallelism.",
+                    "shor-step-3": "<strong>Quantum Fourier Transform (QFT):</strong> The QFT is applied to the input register. This quantum operation interferes all the parallel computations in such a way that the periodic nature of the function $a^k \\pmod{M}$ is encoded into the state's phase.",
+                    "shor-step-4": "<strong>Period Extraction & Factor Derivation:</strong> Measuring the input register now yields a value related to the period $r$. A classical algorithm (continued fractions) extracts $r$. Once $r$ is known, factors of M can be derived with gcd($a^{r/2} \\pm 1$, M)."
+                }
+            };
+            
+            const tabContentData = {
+                mersenne: `
+                    <h4 class="text-xl font-semibold mb-3">Mersenne Numbers ($M_P = 2^P - 1$)</h4>
+                    <p class="text-gray-700 mb-4">Perhaps the most famous subclass, where X=2 and the exponent P is a prime number. They have a rich history in number theory and record-setting factorization efforts.</p>
+                    <ul class="space-y-2 list-disc list-inside text-gray-600">
+                        <li><strong>Necessary Condition:</strong> For $M_P$ to be prime, the exponent P must also be prime. This is not sufficient, e.g., $2^{11}-1 = 2047 = 23 \\times 89$.</li>
+                        <li><strong>Factor Form:</strong> Any prime factor of $M_P$ must be of the form $2kP + 1$. This property greatly narrows the search for factors.</li>
+                        <li><strong>Perfect Numbers:</strong> Mersenne primes are deeply connected to perfect numbers via the Euclid-Euler theorem.</li>
+                        <li><strong>GIMPS:</strong> The Great Internet Mersenne Prime Search is a distributed computing project dedicated to finding new Mersenne primes.</li>
+                    </ul>`,
+                cunningham: `
+                    <h4 class="text-xl font-semibold mb-3">Cunningham Numbers ($b^N \\pm 1$)</h4>
+                    <p class="text-gray-700 mb-4">Numbers of the form $X^N-1$ are a specific type of Cunningham number, a broad category of numbers that have been the subject of a long-standing collaborative factorization effort known as the Cunningham Project.</p>
+                    <ul class="space-y-2 list-disc list-inside text-gray-600">
+                        <li><strong>Notation:</strong> $X^N-1$ corresponds to $C^-(X, N)$.</li>
+                        <li><strong>Factorization Project:</strong> The Cunningham Project maintains extensive tables of known factors for these numbers, driving the development of algorithms like SNFS.</li>
+                        <li><strong>Factor Form:</strong> Similar to Mersenne numbers, prime factors of $b^N - 1$ (for prime N) are often of the form $2kN+1$.</li>
+                    </ul>`,
+                general: `
+                    <h4 class="text-xl font-semibold mb-3">General Properties of $X^N - 1$</h4>
+                    <p class="text-gray-700 mb-4">The polynomial $x^n - 1$ has well-understood algebraic factorizations that can be exploited by classical algorithms.</p>
+                    <ul class="space-y-2 list-disc list-inside text-gray-600">
+                        <li><strong>Trivial Factor:</strong> $X-1$ is always a factor of $X^N-1$.</li>
+                        <li><strong>Recursive Decomposition:</strong> If N is composite, e.g., N=cd, then $X^c-1$ is a factor of $X^N-1$.</li>
+                        <li><strong>Cyclotomic Polynomials:</strong> The polynomial $x^n - 1$ can be factored into a product of irreducible cyclotomic polynomials, $\\Phi_d(x)$, over all divisors $d$ of $n$. This provides a deep structural understanding.</li>
+                    </ul>`
+            };
+            
+            function setupFlowchart(containerId, detailsId, data) {
+                const container = document.getElementById(containerId);
+                const details = document.getElementById(detailsId);
+                container.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('flow-step')) {
+                        const allSteps = container.querySelectorAll('.flow-step');
+                        allSteps.forEach(step => step.classList.remove('active'));
+                        e.target.classList.add('active');
+                        details.innerHTML = data[e.target.id];
+                    }
+                });
+            }
+
+            setupFlowchart('snfs-flow-container', 'snfs-details', flowStepData.snfs);
+            setupFlowchart('shor-flow-container', 'shor-details', flowStepData.shor);
+            
+            const tabButtons = {
+                mersenne: document.getElementById('tab-mersenne'),
+                cunningham: document.getElementById('tab-cunningham'),
+                general: document.getElementById('tab-general')
+            };
+            const tabContentContainer = document.getElementById('tab-content');
+
+            function setActiveTab(tabName) {
+                Object.values(tabButtons).forEach(btn => btn.classList.remove('active', 'text-blue-600', 'border-blue-600'));
+                Object.values(tabButtons).forEach(btn => btn.classList.add('text-gray-500', 'border-transparent', 'hover:text-gray-700', 'hover:border-gray-300'));
+                
+                tabButtons[tabName].classList.add('active', 'text-blue-600', 'border-blue-600');
+                tabButtons[tabName].classList.remove('text-gray-500', 'border-transparent', 'hover:text-gray-700', 'hover:border-gray-300');
+                
+                tabContentContainer.innerHTML = tabContentData[tabName];
+            }
+
+            Object.keys(tabButtons).forEach(tabName => {
+                tabButtons[tabName].addEventListener('click', () => setActiveTab(tabName));
+            });
+            setActiveTab('mersenne');
+
+            const slider = document.getElementById('bit-slider');
+            const sliderValue = document.getElementById('bit-slider-value');
+            const ctx = document.getElementById('complexityChart').getContext('2d');
+            let complexityChart;
+
+            function calculateSnfsCost(n) {
+                const lnM = n * Math.log(2);
+                const lnlnM = Math.log(lnM);
+                const c = Math.pow(32 / 9, 1 / 3);
+                return Math.exp(c * Math.pow(lnM, 1/3) * Math.pow(lnlnM, 2/3));
+            }
+
+            function calculateShorCost(n) {
+                return Math.pow(n, 3);
+            }
+
+            function updateChart(currentBits) {
+                const labels = [];
+                const shorData = [];
+                const snfsData = [];
+                for (let n = 10; n <= 4096; n += 64) {
+                    labels.push(n);
+                    shorData.push(calculateShorCost(n));
+                    snfsData.push(calculateSnfsCost(n));
+                }
+
+                if (complexityChart) {
+                    complexityChart.destroy();
+                }
+
+                complexityChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: "Shor's Cost (O(n³))",
+                                data: shorData,
+                                borderColor: 'rgb(20, 184, 166)',
+                                backgroundColor: 'rgba(20, 184, 166, 0.1)',
+                                tension: 0.1,
+                                borderWidth: 2,
+                                pointRadius: 0,
+                            },
+                            {
+                                label: 'SNFS Cost (Sub-exponential)',
+                                data: snfsData,
+                                borderColor: 'rgb(59, 130, 246)',
+                                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                tension: 0.1,
+                                borderWidth: 2,
+                                pointRadius: 0,
+                            },
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Number of Bits (n)' },
+                                grid: { color: '#e5e7eb' }
+                            },
+                            y: {
+                                type: 'logarithmic',
+                                title: { display: true, text: 'Relative Computational Cost (Log Scale)' },
+                                grid: { color: '#e5e7eb' }
+                            }
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += context.parsed.y.toExponential(2);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            },
+                            annotation: {
+                                annotations: {
+                                    line1: {
+                                        type: 'line',
+                                        xMin: currentBits,
+                                        xMax: currentBits,
+                                        borderColor: 'rgb(239, 68, 68)',
+                                        borderWidth: 2,
+                                        borderDash: [6, 6],
+                                        label: {
+                                            content: currentBits + ' bits',
+                                            enabled: true,
+                                            position: 'start'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            slider.addEventListener('input', (event) => {
+                const bits = event.target.value;
+                sliderValue.textContent = bits;
+                updateChart(bits);
+            });
+            
+            updateChart(slider.value);
+            
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('main section');
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href').substring(1) === entry.target.id) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, { rootMargin: "-50% 0px -50% 0px" });
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+            
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    document.querySelector(this.getAttribute('href')).scrollIntoView({
+                        behavior: 'smooth'
+                    });
+                });
+            });
+        });
+    </script>
+</body>
+</html>
