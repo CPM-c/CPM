@@ -66,6 +66,6 @@ jobs:
     # This step is just to set an output, not strictly necessary if you always use CMake or always use Make.
     - name: Check for CMakeLists.txt
       id: cmake_check
-      uses: andstor/file-existence-action@v2
-      with:
+      uses: andstor/file-existence-action@v2 # Corrected action name from previous context
+      with: # Added 'with' which is usually required for actions with inputs
         files: "CMakeLists.txt"
