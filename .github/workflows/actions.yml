@@ -24,7 +24,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libuuid1 uuid-dev # For libuuid
+        sudo apt-get install -y libuuid1 uuid-dev libcurl4-openssl-dev # Added libcurl4-openssl-dev
         # sudo apt-get install -y libcjson-dev # Example for cJSON
         # Add other dependencies here
 
