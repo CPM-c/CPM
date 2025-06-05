@@ -1,0 +1,26 @@
+name: Post HTML Pages
+
+on:
+  push:
+    paths:
+      - '.github/pages/*.html'
+
+jobs:
+  post-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Post HTML files
+        env:
+          POST_URL: ${{ secrets.POST_URL }}     # Set your target endpoint in repo secrets
+          API_TOKEN: ${{ secrets.API_TOKEN }}   # (Optional) Use if you need authentication
+        run: |
+          for file in .github/pages/*.html; do
+            echo "Posting $file"
+            curl -X POST "$POST_URL" \
+              -H "Authorization: Bearer $API_TOKEN" \
+              -H "Content-Type: text/html" \
+              --data-binary @"$file"
+          done
