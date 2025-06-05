@@ -23,8 +23,9 @@ jobs:
     # For example, for libuuid-dev on Ubuntu:
     - name: Install dependencies
       run: |
-        sudo apt-get update
-        sudo apt-get install -y libuuid1 uuid-dev libcurl4-openssl-dev # Added libcurl4-openssl-dev
+        set -e # Exit immediately if a command exits with a non-zero status
+        sudo apt-get update && \
+        sudo apt-get install -y libuuid1 uuid-dev libcurl4-openssl-dev
         # sudo apt-get install -y libcjson-dev # Example for cJSON
         # Add other dependencies here
 
