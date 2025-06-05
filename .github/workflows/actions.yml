@@ -1,72 +1,97 @@
-name: C++ CI/CD
+# .github/workflows/actions.yml
+# Corrected C++ CI/CD Workflow for Windows
+
+name: C++ CI/CD Windows
 
 on:
   push:
-    branches: [ main ] # Or your default branch, e.g., master
+    branches:
+      - main # Triggers on pushes to the main branch
   pull_request:
-    branches: [ main ] # Or your default branch
+    branches:
+      - main # Triggers on pull requests to the main branch
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest # You can also use other runners like macos-latest or windows-latest
+  build-windows: # Job specifically for Windows
+    runs-on: windows-latest # Specifies the runner environment
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v4 # Checks out your repository under $GITHUB_WORKSPACE
 
-    - name: Set up C++ compiler (GCC)
-      uses: egor-tensin/setup-gcc@v1 # Example action to set up GCC
+    - name: Setup MinGW GCC on Windows
+      uses: egor-tensin/setup-mingw@v1 # Sets up MinGW (GCC for Windows)
       with:
-        version: '11' # Specify GCC version, adjust as needed
+        version: 'latest' # You can specify a particular GCC version if needed, e.g., '11'
 
-    # If you need other dependencies (like libuuid, a JSON library, etc.), install them here.
-    # For example, for libuuid-dev on Ubuntu:
-    - name: Install dependencies
+    - name: Install libcurl for MinGW on Windows
+      shell: bash # Using bash shell for curl and unzip commands for consistency
       run: |
-        set -e # Exit immediately if a command exits with a non-zero status
-        sudo apt-get update && \
-        sudo apt-get install -y libuuid1 uuid-dev libcurl4-openssl-dev
-        # sudo apt-get install -y libcjson-dev # Example for cJSON
-        # Add other dependencies here
+        echo "Starting libcurl installation..."
+        # Create a temporary directory for download and extraction
+        mkdir temp_curl
+        cd temp_curl
 
-    - name: Configure (if using CMake)
-      if: steps.cmake_check.outputs.exists == 'true' # Conditional step
-      run: cmake . -B build # Adjust CMake commands as needed
+        # Download libcurl for MinGW (example version, adjust as needed for compatibility)
+        # It's good practice to use a more stable URL or asset if possible.
+        # This URL is for version 7.86.0, ensure it matches your needs or find latest.
+        echo "Downloading libcurl..."
+        curl -L -O https://curl.se/windows/dl-7.86.0/curl-7.86.0-win64-mingw.zip
+        if [ $? -ne 0 ]; then echo "Curl download failed!"; exit 1; fi
+
+        echo "Unzipping libcurl..."
+        # Ensure unzip is available or use an alternative like 7-Zip if pre-installed
+        # On Windows runners, 'tar' or 'Expand-Archive' (PowerShell) might be more reliable
+        # For this example, assuming unzip is available or added via another step if needed.
+        # If using PowerShell: Expand-Archive -Path curl-7.86.0-win64-mingw.zip -DestinationPath C:\mingw_curl_libs
+        unzip curl-7.86.0-win64-mingw.zip -d C:\mingw_curl_libs # Extract to a specific directory
+        if [ $? -ne 0 ]; then echo "Unzip failed!"; exit 1; fi
+        
+        echo "Adding libcurl to PATH and environment variables for compiler..."
+        # Add the bin directory to PATH for any runtime dependencies (DLLs)
+        echo "C:\mingw_curl_libs\bin" >> $GITHUB_PATH
+        
+        # For the compiler to find headers and libs, you might need to set CFLAGS and LDFLAGS
+        # or ensure your Makefile uses these paths.
+        # These are examples; actual paths depend on the unzipped structure of curl-7.86.0-win64-mingw.zip
+        # The typical structure from curl's official MinGW zips places headers in 'include' and libs in 'lib'
+        # under a root directory like 'curl-7.86.0-win64-mingw'.
+        # Let's assume the unzipped structure is C:\mingw_curl_libs\curl-7.86.0-win64-mingw
+        # So headers would be in C:\mingw_curl_libs\curl-7.86.0-win64-mingw\include
+        # And libs in C:\mingw_curl_libs\curl-7.86.0-win64-mingw\lib
+
+        # Setting environment variables that GCC and Make can often pick up
+        # Note: For GitHub Actions, using GITHUB_ENV is preferred for setting env vars for subsequent steps.
+        echo "CPPFLAGS=-IC:/mingw_curl_libs/curl-7.86.0-win64-mingw/include" >> $GITHUB_ENV
+        echo "LDFLAGS=-LC:/mingw_curl_libs/curl-7.86.0-win64-mingw/lib" >> $GITHUB_ENV
+        
+        echo "Libcurl installation directories:"
+        echo "Include path hint: C:/mingw_curl_libs/curl-7.86.0-win64-mingw/include"
+        echo "Library path hint: C:/mingw_curl_libs/curl-7.86.0-win64-mingw/lib"
+        echo "Bin (for DLLs) added to PATH: C:/mingw_curl_libs/bin"
+        
+        cd ..
+        # rm -rf temp_curl # Clean up downloaded zip
+
+    - name: Verify GCC and Check Environment Variables
+      shell: bash
+      run: |
+        gcc --version
+        echo "CPPFLAGS value: $CPPFLAGS"
+        echo "LDFLAGS value: $LDFLAGS"
+        echo "PATH value: $PATH"
 
     - name: Build project
-      run: |
-        # If using Make directly
-        make
-        # If using CMake:
-        # cd build && make
+      shell: bash # Specify shell if make requires bash features or specific environment
+      run: make # Assumes Makefile is in the root of the repository
 
-    - name: Run tests (Optional)
-      # This step assumes you have a target like 'make test' or a test executable
-      # Adjust the command as per your project's testing setup.
+    - name: Run tests (if applicable)
+      shell: bash
       run: |
-        echo "Running tests..."
-        # make test # Example if you have a 'test' target in your Makefile
-        # ./build/your_test_executable # Example if CMake builds a test executable
-        # For now, just a placeholder:
-        if [ -f "./cpm" ]; then
-          ./cpm version # Example: run a basic command of your tool
+        if [ -f "./cpm.exe" ]; then # Check for .exe on Windows
+          ./cpm.exe version
+        elif [ -f "./cpm" ]; then
+          ./cpm version
         else
           echo "CPM executable not found, skipping test run."
         fi
-
-    # Example step to upload build artifact (optional)
-    - name: Upload CPM executable
-      if: success() # Only run if previous steps succeeded
-      uses: actions/upload-artifact@v4
-      with:
-        name: cpm-executable-ubuntu
-        path: ./cpm # Path to your compiled executable
-        if-no-files-found: error # Fails the step if the file isn't found
-
-    # Optional: Check for CMakeLists.txt to conditionally run CMake steps
-    # This step is just to set an output, not strictly necessary if you always use CMake or always use Make.
-    - name: Check for CMakeLists.txt
-      id: cmake_check
-      uses: andstor/file-existence-action@v2 # Corrected action name from previous context
-      with: # Added 'with' which is usually required for actions with inputs
-        files: "CMakeLists.txt"
